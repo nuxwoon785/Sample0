@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Collections.Generic;
 using System.Text.Json;
 using System.Threading.Tasks;
 using ModelConfig.Models;
@@ -14,35 +15,87 @@ public class ConfigStorage
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase
     };
 
-    public async Task<ProjectConfiguration> LoadAsync(string path)
+    public async Task<ProjectConfiguration> LoadAsync(string rootPath)
     {
-        if (!File.Exists(path))
+        var configuration = new ProjectConfiguration();
+
+        if (string.IsNullOrWhiteSpace(rootPath) || !Directory.Exists(rootPath))
         {
-            return new ProjectConfiguration();
+            return configuration;
         }
 
-        await using var stream = File.OpenRead(path);
-        var config = await JsonSerializer.DeserializeAsync<ProjectConfiguration>(stream, _options);
-        return config ?? new ProjectConfiguration();
+        var directories = Directory.GetDirectories(rootPath);
+        foreach (var directory in directories)
+        {
+            var masterPath = Path.Combine(directory, "master.json");
+            MasterConfiguration master;
+
+            if (File.Exists(masterPath))
+            {
+                await using var stream = File.OpenRead(masterPath);
+                master = await JsonSerializer.DeserializeAsync<MasterConfiguration>(stream, _options) ?? new MasterConfiguration();
+            }
+            else
+            {
+                master = new MasterConfiguration { Name = Path.GetFileName(directory) };
+            }
+
+            master.FolderName = Path.GetFileName(directory);
+            configuration.Masters.Add(master);
+        }
+
+        return configuration;
     }
 
-    public async Task SaveAsync(ProjectConfiguration configuration, string path)
+    public async Task SaveAsync(ProjectConfiguration configuration, string rootPath)
     {
-        var directory = Path.GetDirectoryName(path);
-        if (!string.IsNullOrWhiteSpace(directory) && !Directory.Exists(directory))
+        ArgumentNullException.ThrowIfNull(configuration);
+
+        if (string.IsNullOrWhiteSpace(rootPath))
         {
-            Directory.CreateDirectory(directory);
+            throw new ArgumentException("설정 루트 경로가 비어 있습니다.", nameof(rootPath));
         }
 
-        await using var stream = File.Create(path);
-        await JsonSerializer.SerializeAsync(stream, configuration, _options);
+        Directory.CreateDirectory(rootPath);
+
+        var desiredFolders = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var master in configuration.Masters)
+        {
+            var folderName = !string.IsNullOrWhiteSpace(master.FolderName)
+                ? master.FolderName
+                : SanitizeFolderName(!string.IsNullOrWhiteSpace(master.ModelCode) ? master.ModelCode : master.Name);
+
+            if (string.IsNullOrWhiteSpace(folderName))
+            {
+                folderName = Guid.NewGuid().ToString();
+            }
+
+            var masterDirectory = Path.Combine(rootPath, folderName);
+            Directory.CreateDirectory(masterDirectory);
+            master.FolderName = folderName;
+            desiredFolders.Add(folderName);
+
+            var masterPath = Path.Combine(masterDirectory, "master.json");
+            await using var stream = File.Create(masterPath);
+            await JsonSerializer.SerializeAsync(stream, master, _options);
+        }
+
+        foreach (var directory in Directory.GetDirectories(rootPath))
+        {
+            var folderName = Path.GetFileName(directory);
+            if (!desiredFolders.Contains(folderName))
+            {
+                Directory.Delete(directory, recursive: true);
+            }
+        }
     }
 
     public async Task<string> BackupAsync(string sourcePath, string backupDirectory)
     {
-        if (!File.Exists(sourcePath))
+        if (!Directory.Exists(sourcePath))
         {
-            throw new FileNotFoundException("설정 파일을 찾을 수 없습니다.", sourcePath);
+            throw new DirectoryNotFoundException($"설정 루트 폴더를 찾을 수 없습니다: {sourcePath}");
         }
 
         if (!Directory.Exists(backupDirectory))
@@ -51,10 +104,42 @@ public class ConfigStorage
         }
 
         var timestamp = DateTime.Now.ToString("yyyyMMdd-HHmmss");
-        var backupPath = Path.Combine(backupDirectory, $"config-{timestamp}.json");
-        await using var sourceStream = File.OpenRead(sourcePath);
-        await using var destinationStream = File.Create(backupPath);
-        await sourceStream.CopyToAsync(destinationStream);
+        var backupPath = Path.Combine(backupDirectory, $"config-{timestamp}");
+        CopyDirectory(sourcePath, backupPath);
+        await Task.CompletedTask;
         return backupPath;
+    }
+
+    private static string SanitizeFolderName(string? name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            return string.Empty;
+        }
+
+        var invalidChars = Path.GetInvalidFileNameChars();
+        foreach (var invalidChar in invalidChars)
+        {
+            name = name.Replace(invalidChar, '_');
+        }
+
+        return name.Trim();
+    }
+
+    private static void CopyDirectory(string sourceDir, string destinationDir)
+    {
+        Directory.CreateDirectory(destinationDir);
+
+        foreach (var file in Directory.GetFiles(sourceDir))
+        {
+            var destFile = Path.Combine(destinationDir, Path.GetFileName(file));
+            File.Copy(file, destFile, overwrite: true);
+        }
+
+        foreach (var directory in Directory.GetDirectories(sourceDir))
+        {
+            var destSubDir = Path.Combine(destinationDir, Path.GetFileName(directory));
+            CopyDirectory(directory, destSubDir);
+        }
     }
 }

@@ -10,6 +10,8 @@ public class MasterConfiguration
 
     public string Name { get; set; } = string.Empty;
 
+    public string FolderName { get; set; } = string.Empty;
+
     public string ModelCode { get; set; } = string.Empty;
 
     public string Description { get; set; } = string.Empty;
@@ -22,6 +24,7 @@ public class MasterConfiguration
         {
             Id = Guid.NewGuid(),
             Name = name ?? Name,
+            FolderName = string.Empty,
             ModelCode = modelCode,
             Description = Description,
             Cameras = Cameras.Select(camera => camera.Clone()).ToList()

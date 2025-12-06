@@ -13,13 +13,13 @@ public partial class MainForm : Form
 {
     private readonly ConfigStorage _storage = new();
     private ProjectConfiguration _configuration = new();
-    private readonly string _defaultConfigPath = Path.Combine(AppContext.BaseDirectory, "config.json");
+    private readonly string _defaultConfigRoot = Path.Combine(AppContext.BaseDirectory, "Models");
     private readonly string _backupDirectory = Path.Combine(AppContext.BaseDirectory, "backups");
 
     public MainForm()
     {
         InitializeComponent();
-        txtConfigPath.Text = _defaultConfigPath;
+        txtConfigPath.Text = _defaultConfigRoot;
     }
 
     private async void MainForm_Load(object? sender, EventArgs e)
@@ -31,12 +31,12 @@ public partial class MainForm : Form
     {
         try
         {
-            _configuration = await _storage.LoadAsync(CurrentConfigPath);
+            _configuration = await _storage.LoadAsync(CurrentConfigRoot);
             BindMasters();
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"설정 파일을 불러오는 중 오류가 발생했습니다.\n{ex.Message}", "로드 오류", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            MessageBox.Show($"설정 폴더를 불러오는 중 오류가 발생했습니다.\n{ex.Message}", "로드 오류", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }
 
@@ -44,17 +44,17 @@ public partial class MainForm : Form
     {
         try
         {
-            await _storage.SaveAsync(_configuration, CurrentConfigPath);
-            MessageBox.Show("설정을 저장했습니다.", "저장 완료", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            await _storage.SaveAsync(_configuration, CurrentConfigRoot);
+            MessageBox.Show("설정 폴더에 저장했습니다.", "저장 완료", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"설정 파일을 저장하는 중 오류가 발생했습니다.\n{ex.Message}", "저장 오류", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            MessageBox.Show($"설정 폴더에 저장하는 중 오류가 발생했습니다.\n{ex.Message}", "저장 오류", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }
 
-    private string CurrentConfigPath => string.IsNullOrWhiteSpace(txtConfigPath.Text)
-        ? _defaultConfigPath
+    private string CurrentConfigRoot => string.IsNullOrWhiteSpace(txtConfigPath.Text)
+        ? _defaultConfigRoot
         : txtConfigPath.Text;
 
     private MasterConfiguration? SelectedMaster => lstMasters.SelectedItem as MasterConfiguration;
@@ -344,8 +344,8 @@ public partial class MainForm : Form
     {
         try
         {
-            var backupPath = await _storage.BackupAsync(CurrentConfigPath, _backupDirectory);
-            MessageBox.Show($"백업을 생성했습니다:\n{backupPath}", "백업 완료", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            var backupPath = await _storage.BackupAsync(CurrentConfigRoot, _backupDirectory);
+            MessageBox.Show($"설정 폴더를 백업했습니다:\n{backupPath}", "백업 완료", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
         catch (Exception ex)
         {
