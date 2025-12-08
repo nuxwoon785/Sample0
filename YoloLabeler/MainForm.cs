@@ -162,6 +162,41 @@ public partial class MainForm : Form
         }
     }
 
+    private void generateButton_Click(object sender, EventArgs e)
+    {
+        if (string.IsNullOrWhiteSpace(_folder))
+        {
+            return;
+        }
+
+        var folderName = new DirectoryInfo(_folder).Name;
+        var templatePath = Path.Combine(_folder, folderName + ".txt");
+        if (!File.Exists(templatePath))
+        {
+            MessageBox.Show($"Template file not found: {templatePath}", "Generation failed", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return;
+        }
+
+        var templateContent = File.ReadAllText(templatePath);
+        var generated = 0;
+        var skipped = 0;
+
+        foreach (var imagePath in _images)
+        {
+            var targetPath = _annotationService.GetAnnotationPath(imagePath);
+            if (File.Exists(targetPath))
+            {
+                skipped++;
+                continue;
+            }
+
+            File.WriteAllText(targetPath, templateContent);
+            generated++;
+        }
+
+        MessageBox.Show($"Generated {generated} annotation file(s).\nSkipped {skipped} existing file(s).", "Generation complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
+    }
+
     private void classSelector_SelectedIndexChanged(object sender, EventArgs e)
     {
         if (classSelector.SelectedIndex >= 0)
