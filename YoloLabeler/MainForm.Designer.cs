@@ -12,6 +12,7 @@ partial class MainForm
     private Button previousButton = null!;
     private Button nextButton = null!;
     private Button saveButton = null!;
+    private Button generateButton = null!;
     private Button resetViewButton = null!;
     private ComboBox classSelector = null!;
     private TextBox classNameInput = null!;
@@ -36,6 +37,7 @@ partial class MainForm
         previousButton = new Button();
         nextButton = new Button();
         saveButton = new Button();
+        generateButton = new Button();
         resetViewButton = new Button();
         classSelector = new ComboBox();
         classNameInput = new TextBox();
@@ -62,6 +64,7 @@ partial class MainForm
         controlsPanel.Controls.Add(previousButton);
         controlsPanel.Controls.Add(nextButton);
         controlsPanel.Controls.Add(saveButton);
+        controlsPanel.Controls.Add(generateButton);
         controlsPanel.Controls.Add(resetViewButton);
         controlsPanel.Controls.Add(fileLabel);
         controlsPanel.Controls.Add(new Label { Text = "Class:", AutoSize = true, Padding = new Padding(10, 5, 0, 0) });
@@ -89,6 +92,9 @@ partial class MainForm
 
         saveButton.Text = "Save";
         saveButton.Click += saveButton_Click;
+
+        generateButton.Text = "Generate";
+        generateButton.Click += generateButton_Click;
 
         resetViewButton.Text = "Reset View";
         resetViewButton.Click += resetViewButton_Click;
