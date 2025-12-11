@@ -43,6 +43,8 @@ public class RoiExportService
             throw new InvalidOperationException("Unable to decode source image.");
         }
 
+        var baseImageName = Path.GetFileNameWithoutExtension(sourceImagePath);
+
         foreach (var roi in rois)
         {
             var targetFolder = Path.Combine(outputRoot, roi.Name, roi.Classification == RoiClassification.Ok ? "OK" : "NG");
@@ -53,7 +55,7 @@ public class RoiExportService
             bitmap.ExtractSubset(subset, rect);
             using var image = SKImage.FromBitmap(subset);
             using var data = image.Encode(SKEncodedImageFormat.Png, 100);
-            var filename = Path.Combine(targetFolder, $"{roi.Name}-{roi.Id}.png");
+            var filename = Path.Combine(targetFolder, $"{baseImageName}_{roi.Name}.png");
             await using var fileStream = File.Create(filename);
             data.SaveTo(fileStream);
         }
