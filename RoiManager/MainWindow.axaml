@@ -1,0 +1,56 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        x:Class="RoiManager.MainWindow"
+        Width="1100" Height="700"
+        Title="ROI Manager"
+        mc:Ignorable="d">
+  <Grid RowDefinitions="Auto,*" ColumnDefinitions="2* , 1.2*">
+    <StackPanel Grid.Row="0" Grid.Column="0" Orientation="Horizontal" Margin="10" Spacing="8">
+      <Button x:Name="LoadImageButton" Content="이미지 열기" Width="100" />
+      <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="4">
+        <TextBlock VerticalAlignment="Center" Text="ROI 이름"/>
+        <TextBox x:Name="RoiNameBox" Width="160"/>
+      </StackPanel>
+      <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="4">
+        <TextBlock VerticalAlignment="Center" Text="판정"/>
+        <ComboBox x:Name="ResultSelector" Width="80">
+          <ComboBoxItem Content="OK" />
+          <ComboBoxItem Content="NG" />
+        </ComboBox>
+      </StackPanel>
+      <Button x:Name="AddOrUpdateButton" Content="ROI 등록/수정" Width="130" />
+      <Button x:Name="DeleteButton" Content="ROI 삭제" Width="90" />
+    </StackPanel>
+
+    <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Margin="10" Spacing="8" HorizontalAlignment="Right">
+      <StackPanel Orientation="Horizontal" Spacing="4">
+        <TextBlock VerticalAlignment="Center" Text="저장 경로"/>
+        <TextBox x:Name="OutputPathBox" Width="220"/>
+      </StackPanel>
+      <Button x:Name="SaveButton" Content="ROI 저장" Width="100" />
+    </StackPanel>
+
+    <Grid Grid.Row="1" Grid.Column="0" Margin="10" ColumnDefinitions="*">
+      <Border BorderBrush="#DDD" BorderThickness="1" Background="#111">
+        <Grid>
+          <Image x:Name="ImageView" Stretch="Uniform"/>
+          <Canvas x:Name="Overlay" Background="Transparent"/>          
+        </Grid>
+      </Border>
+    </Grid>
+
+    <StackPanel Grid.Row="1" Grid.Column="1" Margin="10" Spacing="8">
+      <TextBlock Text="ROI 목록" FontWeight="Bold" FontSize="16" />
+      <ListBox x:Name="RoiList" DisplayMemberPath="Display" Height="220"/>
+      <Border BorderBrush="#DDD" BorderThickness="1" Padding="8">
+        <StackPanel Spacing="6">
+          <TextBlock Text="현재 ROI 정보" FontWeight="Bold" />
+          <TextBlock x:Name="RoiInfo" TextWrapping="Wrap"/>
+          <TextBlock Text="마우스로 ROI를 그리거나, 선택 후 이동/리사이즈 가능합니다." TextWrapping="Wrap" FontSize="12"/>
+        </StackPanel>
+      </Border>
+    </StackPanel>
+  </Grid>
+</Window>
