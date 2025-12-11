@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Drawing;
+using System.IO;
 using System.Linq;
 using System.Windows.Forms;
 using ModelConfig.Controls;
@@ -48,10 +49,7 @@ public partial class RoiEditorForm : Form
 
         if (dialog.ShowDialog() == DialogResult.OK)
         {
-            _imagePath = dialog.FileName;
-            txtImagePath.Text = _imagePath;
-            using var bitmap = new Bitmap(_imagePath);
-            canvas.ImageBitmap = new Bitmap(bitmap);
+            LoadImage(dialog.FileName);
         }
     }
 
@@ -83,7 +81,7 @@ public partial class RoiEditorForm : Form
         try
         {
             var loaded = await _exportService.LoadConfigurationAsync(dialog.FileName);
-            ApplyLoadedRois(loaded);
+            ApplyLoadedConfiguration(loaded, dialog.FileName);
         }
         catch (Exception ex)
         {
@@ -114,7 +112,7 @@ public partial class RoiEditorForm : Form
         try
         {
             await _exportService.ExportCropsAsync(_rois, _imagePath, txtOutputPath.Text);
-            await _exportService.SaveConfigurationAsync(_rois, txtOutputPath.Text);
+            await _exportService.SaveConfigurationAsync(_rois, txtOutputPath.Text, _imagePath);
             MessageBox.Show("ROI를 저장하고 분류 폴더로 내보냈습니다.", "완료", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
         catch (Exception ex)
@@ -174,17 +172,66 @@ public partial class RoiEditorForm : Form
         }
     }
 
-    private void ApplyLoadedRois(IEnumerable<RoiAnnotation> loaded)
+    private void ApplyLoadedConfiguration(RoiConfiguration configuration, string? configurationPath)
     {
         _rois.Clear();
 
-        foreach (var roi in loaded)
+        foreach (var roi in configuration.Rois)
         {
             _rois.Add(roi);
+        }
+
+        var imagePath = ResolveImagePath(configuration.SourceImagePath, configurationPath);
+        if (!string.IsNullOrWhiteSpace(imagePath))
+        {
+            try
+            {
+                LoadImage(imagePath);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"이미지를 불러오지 못했습니다.\n{ex.Message}", "이미지 로드 오류", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
         }
 
         canvas.SelectRoi(_rois.FirstOrDefault());
         Canvas_RoiListChanged(canvas, EventArgs.Empty);
         canvas.Invalidate();
+    }
+
+    private string? ResolveImagePath(string? storedPath, string? configurationPath)
+    {
+        if (string.IsNullOrWhiteSpace(storedPath))
+        {
+            return null;
+        }
+
+        if (File.Exists(storedPath))
+        {
+            return storedPath;
+        }
+
+        if (!string.IsNullOrWhiteSpace(configurationPath))
+        {
+            var baseDirectory = Path.GetDirectoryName(configurationPath);
+            if (!string.IsNullOrWhiteSpace(baseDirectory))
+            {
+                var combined = Path.Combine(baseDirectory, storedPath);
+                if (File.Exists(combined))
+                {
+                    return combined;
+                }
+            }
+        }
+
+        return storedPath;
+    }
+
+    private void LoadImage(string path)
+    {
+        _imagePath = path;
+        txtImagePath.Text = _imagePath;
+        using var bitmap = new Bitmap(_imagePath);
+        canvas.ImageBitmap = new Bitmap(bitmap);
     }
 }

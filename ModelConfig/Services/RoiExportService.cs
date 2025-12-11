@@ -18,7 +18,7 @@ public class RoiExportService
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase
     };
 
-    public async Task<IReadOnlyList<RoiAnnotation>> LoadConfigurationAsync(string path)
+    public async Task<RoiConfiguration> LoadConfigurationAsync(string path)
     {
         if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
         {
@@ -26,17 +26,35 @@ public class RoiExportService
         }
 
         await using var stream = File.OpenRead(path);
-        var loaded = await JsonSerializer.DeserializeAsync<List<RoiAnnotation>>(stream, _jsonOptions) ?? new List<RoiAnnotation>();
-        return loaded;
+        try
+        {
+            var configuration = await JsonSerializer.DeserializeAsync<RoiConfiguration>(stream, _jsonOptions) ?? new RoiConfiguration();
+            configuration.Rois ??= new List<RoiAnnotation>();
+            return configuration;
+        }
+        catch (JsonException)
+        {
+            stream.Position = 0;
+            var legacy = await JsonSerializer.DeserializeAsync<List<RoiAnnotation>>(stream, _jsonOptions) ?? new List<RoiAnnotation>();
+            return new RoiConfiguration
+            {
+                Rois = legacy
+            };
+        }
     }
 
-    public async Task SaveConfigurationAsync(IEnumerable<RoiAnnotation> rois, string outputRoot)
+    public async Task SaveConfigurationAsync(IEnumerable<RoiAnnotation> rois, string outputRoot, string? sourceImagePath)
     {
         ArgumentNullException.ThrowIfNull(rois);
         Directory.CreateDirectory(outputRoot);
         var path = Path.Combine(outputRoot, "rois.json");
+        var configuration = new RoiConfiguration
+        {
+            SourceImagePath = sourceImagePath,
+            Rois = rois.ToList()
+        };
         await using var stream = File.Create(path);
-        await JsonSerializer.SerializeAsync(stream, rois, _jsonOptions);
+        await JsonSerializer.SerializeAsync(stream, configuration, _jsonOptions);
     }
 
     public async Task ExportCropsAsync(IEnumerable<RoiAnnotation> rois, string sourceImagePath, string outputRoot)
